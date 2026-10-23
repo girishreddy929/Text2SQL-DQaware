@@ -1,0 +1,81 @@
+# config/dq_rules/olist_sales.yaml   (Block 4, starter set: one example of every rule type)
+# threshold = minimum % of rows that must pass (default 100).
+# dimension is optional for NON_NULL, UNIQUENESS, RANGE, SET, REGEX; required for the others.
+source_id: olist
+
+rules:
+  - id: orders_order_id_not_null
+    table: sales.orders
+    column: order_id
+    type: NON_NULL
+    threshold: 100
+    description: Every order must have an id.
+
+  - id: orders_order_id_unique
+    table: sales.orders
+    type: UNIQUENESS
+    column: order_id
+    threshold: 100
+    description: order_id identifies an order, so it must not repeat.
+
+  - id: order_items_key_unique
+    table: sales.order_items
+    type: UNIQUENESS
+    columns: [order_id, order_item_id]      # composite key
+    threshold: 100
+    description: An order line is identified by order_id plus order_item_id.
+
+  - id: order_items_price_positive
+    table: sales.order_items
+    column: price
+    type: RANGE
+    min_value: 0
+    strict_min: true                        # price must be > 0, not >= 0
+    threshold: 99.9
+    description: Prices must be positive.
+
+  - id: orders_status_valid
+    table: sales.orders
+    column: order_status
+    type: SET
+    values: [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+    threshold: 100
+    description: Only the 8 documented order statuses are allowed.
+
+  - id: orders_delivered_has_date
+    table: sales.orders
+    type: ROW_CONDITION
+    dimension: Consistency
+    expression: "order_status <> 'delivered' OR order_delivered_customer_date IS NOT NULL"
+    threshold: 99.9
+    description: A delivered order must have a customer delivery date.
+
+  - id: orders_delivery_after_purchase
+    table: sales.orders
+    type: ROW_CONDITION
+    dimension: Consistency
+    expression: "order_delivered_customer_date IS NULL OR order_delivered_customer_date >= order_purchase_timestamp"
+    threshold: 99.9
+    description: An order cannot be delivered before it was purchased.
+
+  - id: orders_order_id_format
+    table: sales.orders
+    column: order_id
+    type: REGEX
+    pattern: '^[0-9a-f]{32}$'
+    threshold: 100
+    description: order_id is a 32-character lowercase hex string.
+
+  - id: orders_minimum_volume
+    table: sales.orders
+    type: TABLE_CONDITION
+    dimension: Completeness
+    expression: "count(*) >= 90000"
+    description: The orders table should hold at least 90,000 rows (guards against a truncated load).
+
+  - id: order_items_have_order
+    table: sales.order_items
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT i.order_id, i.order_item_id FROM sales.order_items i LEFT JOIN sales.orders o ON o.order_id = i.order_id WHERE o.order_id IS NULL"
+    description: Every order line must belong to an existing order (no orphan lines). The query returns the VIOLATING rows.

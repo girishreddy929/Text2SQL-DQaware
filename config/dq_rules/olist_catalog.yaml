@@ -1,0 +1,54 @@
+# config/dq_rules/olist_catalog.yaml   (Block 4, Step 5)
+source_id: olist
+
+rules:
+  - id: products_id_unique
+    table: catalog.products
+    column: product_id
+    type: UNIQUENESS
+    description: product_id identifies a product.
+
+  - id: products_category_present
+    table: catalog.products
+    column: product_category_name
+    type: NON_NULL
+    threshold: 99
+    description: Products should have a category (expected to FAIL; about 1.85% are null).
+
+  - id: products_weight_positive
+    table: catalog.products
+    column: product_weight_g
+    type: RANGE
+    min_value: 0
+    strict_min: true
+    threshold: 99.9
+    description: A product weight must be greater than zero.
+
+  - id: products_photos_valid
+    table: catalog.products
+    column: product_photos_qty
+    type: RANGE
+    min_value: 1
+    max_value: 20
+    threshold: 99.9
+    description: Photo counts should be between 1 and 20.
+
+  - id: sellers_id_unique
+    table: catalog.sellers
+    column: seller_id
+    type: UNIQUENESS
+    description: seller_id identifies a seller.
+
+  - id: sellers_state_valid
+    table: catalog.sellers
+    column: seller_state
+    type: SET
+    values: [AC, AL, AP, AM, BA, CE, DF, ES, GO, MA, MT, MS, MG, PA, PB, PR, PE, PI, RJ, RN, RS, RO, RR, SC, SP, SE, TO]
+    description: Only the 27 Brazilian state codes are allowed.
+
+  - id: products_category_translated
+    table: catalog.products
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT DISTINCT p.product_category_name FROM catalog.products p LEFT JOIN catalog.category_translation t ON t.product_category_name = p.product_category_name WHERE p.product_category_name IS NOT NULL AND t.product_category_name IS NULL"
+    description: Every product category needs an English translation (expected to FAIL - 2 categories are missing).

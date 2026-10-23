@@ -1,0 +1,16 @@
+# config/profiler.yaml  (Block 3). Every key is optional; the values below are the defaults.
+
+# How many most-frequent values to store per column (dq.profiles.top_values).
+top_n: 10
+
+# Long strings (for example review comments) are cut to this many characters in top values.
+value_max_chars: 100
+
+# Column categories that get a top-values query. Temporal is off: timestamps are almost unique.
+top_values_categories: [text, numeric, boolean]
+
+# Wide tables are profiled in chunks of this many columns (Postgres limit: 1664 select items).
+max_columns_per_query: 50
+
+# Safety net for each profiling statement (the admin role has no timeout of its own).
+statement_timeout_seconds: 300

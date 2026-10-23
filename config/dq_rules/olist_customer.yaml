@@ -1,0 +1,69 @@
+# config/dq_rules/olist_customer.yaml   (Block 4, Step 5)
+source_id: olist
+
+rules:
+  - id: customers_id_unique
+    table: customer.customers
+    column: customer_id
+    type: UNIQUENESS
+    description: customer_id identifies one customer record per order.
+
+  - id: customers_zip_present
+    table: customer.customers
+    column: customer_zip_code_prefix
+    type: NON_NULL
+    description: Every customer needs a zip code prefix.
+
+  - id: customers_state_valid
+    table: customer.customers
+    column: customer_state
+    type: SET
+    values: [AC, AL, AP, AM, BA, CE, DF, ES, GO, MA, MT, MS, MG, PA, PB, PR, PE, PI, RJ, RN, RS, RO, RR, SC, SP, SE, TO]
+    description: Only the 27 Brazilian state codes are allowed.
+
+  - id: geolocation_lat_in_brazil
+    table: customer.geolocation
+    column: geolocation_lat
+    type: RANGE
+    min_value: -34
+    max_value: 6
+    threshold: 99.9
+    description: Latitudes must fall inside Brazil (about -33.8 to 5.3).
+
+  - id: geolocation_lng_in_brazil
+    table: customer.geolocation
+    column: geolocation_lng
+    type: RANGE
+    min_value: -74
+    max_value: -34
+    threshold: 99.9
+    description: Longitudes must fall inside Brazil (about -73.99 to -34.79).
+
+  - id: reviews_score_valid
+    table: customer.order_reviews
+    column: review_score
+    type: RANGE
+    min_value: 1
+    max_value: 5
+    description: Review scores run from 1 to 5.
+
+  - id: reviews_comment_message_present
+    table: customer.order_reviews
+    column: review_comment_message
+    type: NON_NULL
+    threshold: 80
+    description: At least 80% of reviews should carry a comment (expected to FAIL; about 41% do).
+
+  - id: reviews_answer_after_creation
+    table: customer.order_reviews
+    type: ROW_CONDITION
+    dimension: Consistency
+    expression: "review_answer_timestamp >= review_creation_date"
+    description: A review cannot be answered before it was created.
+
+  - id: reviews_have_order
+    table: customer.order_reviews
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT r.review_id, r.order_id FROM customer.order_reviews r LEFT JOIN sales.orders o ON o.order_id = r.order_id WHERE o.order_id IS NULL"
+    description: Every review must belong to an existing order.

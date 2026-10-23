@@ -1,0 +1,67 @@
+# config/dq_rules/olist_sales_extra.yaml   (Block 4, Step 5)
+# Joins to other schemas are fine: rule SQL runs as t2s_reader, which can read all four.
+source_id: olist
+
+rules:
+  - id: payments_value_nonnegative
+    table: sales.order_payments
+    column: payment_value
+    type: RANGE
+    min_value: 0
+    description: A payment cannot be negative.
+
+  - id: payments_type_valid
+    table: sales.order_payments
+    column: payment_type
+    type: SET
+    values: [credit_card, boleto, voucher, debit_card, not_defined]
+    description: Only the documented payment types are allowed.
+
+  - id: payments_installments_positive
+    table: sales.order_payments
+    column: payment_installments
+    type: RANGE
+    min_value: 1
+    description: A payment has at least one installment (expected to FAIL- a few rows have 0).
+
+  - id: orders_purchase_not_in_future
+    table: sales.orders
+    type: ROW_CONDITION
+    dimension: Timeliness
+    expression: "order_purchase_timestamp <= now()"
+    description: An order cannot be purchased in the future.
+
+  - id: orders_data_is_recent
+    table: sales.orders
+    type: TABLE_CONDITION
+    dimension: Timeliness
+    expression: "max(order_purchase_timestamp) > now() - interval '30 days'"
+    description: Fresh data should have orders from the last 30 days (expected to FAIL- this public dataset ends in 2018).
+
+  - id: payments_have_order
+    table: sales.order_payments
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT p.order_id FROM sales.order_payments p LEFT JOIN sales.orders o ON o.order_id = p.order_id WHERE o.order_id IS NULL"
+    description: Every payment must belong to an existing order.
+
+  - id: orders_have_customer
+    table: sales.orders
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT o.order_id FROM sales.orders o LEFT JOIN customer.customers c ON c.customer_id = o.customer_id WHERE c.customer_id IS NULL"
+    description: Every order must belong to an existing customer.
+
+  - id: order_items_have_product
+    table: sales.order_items
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT i.order_id, i.order_item_id FROM sales.order_items i LEFT JOIN catalog.products p ON p.product_id = i.product_id WHERE p.product_id IS NULL"
+    description: Every order line must reference an existing product.
+
+  - id: order_items_have_seller
+    table: sales.order_items
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT i.order_id, i.order_item_id FROM sales.order_items i LEFT JOIN catalog.sellers s ON s.seller_id = i.seller_id WHERE s.seller_id IS NULL"
+    description: Every order line must reference an existing seller.

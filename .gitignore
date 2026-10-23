@@ -1,0 +1,19 @@
+# secrets
+.env
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# data (large, downloadable)
+data/raw/
+data/bird/
+
+# caches and logs
+.cache/
+*.log
+
+docs/

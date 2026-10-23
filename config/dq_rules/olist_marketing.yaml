@@ -1,0 +1,43 @@
+# config/dq_rules/olist_marketing.yaml   (Block 4, Step 5)
+source_id: olist
+
+rules:
+  - id: closed_deals_mql_unique
+    table: marketing.closed_deals
+    column: mql_id
+    type: UNIQUENESS
+    description: A marketing-qualified lead closes at most once.
+
+  - id: closed_deals_company_known
+    table: marketing.closed_deals
+    column: has_company
+    type: NON_NULL
+    threshold: 90
+    description: At least 90% of closed deals should say whether the seller has a company (expected to FAIL; about 92% are null).
+
+  - id: closed_deals_revenue_nonnegative
+    table: marketing.closed_deals
+    column: declared_monthly_revenue
+    type: RANGE
+    min_value: 0
+    description: Declared monthly revenue cannot be negative.
+
+  - id: closed_deals_have_lead
+    table: marketing.closed_deals
+    type: SQL_ASSERTION
+    dimension: Consistency
+    sql: "SELECT d.mql_id FROM marketing.closed_deals d LEFT JOIN marketing.qualified_leads l ON l.mql_id = d.mql_id WHERE l.mql_id IS NULL"
+    description: Every closed deal must trace back to a qualified lead.
+
+  - id: leads_mql_unique
+    table: marketing.qualified_leads
+    column: mql_id
+    type: UNIQUENESS
+    description: mql_id identifies a qualified lead.
+
+  - id: leads_origin_present
+    table: marketing.qualified_leads
+    column: origin
+    type: NON_NULL
+    threshold: 99
+    description: Lead origin (marketing channel) should be known for at least 99% of leads.
