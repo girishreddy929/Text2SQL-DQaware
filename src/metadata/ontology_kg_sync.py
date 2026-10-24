@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+
 from sqlalchemy import text
+
 from src.common.db import get_admin_engine
 from src.metadata.kg_models import edge_id, node_id
 from src.metadata.ontology_models import slug

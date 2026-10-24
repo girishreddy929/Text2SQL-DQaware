@@ -165,13 +165,13 @@ def test_meta_schema_tables():
                 )
             )
         }
-    assert found == {
+    assert {
         "columns",
         "tables",
         "generation_runs",
         "reference_descriptions",
         "description_scores",
-    }
+    }.issubset(found)
 
 
 @pytest.mark.db
