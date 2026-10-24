@@ -10,4 +10,5 @@ langchain-google-genai>=2.0
 pytest>=8.0
 kaggle>=1.6
 ipykernel>=6.29
-datasets>=2.19
+# datasets>=2.19
+networkx>=3.4,<4.0

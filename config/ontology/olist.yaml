@@ -1,0 +1,90 @@
+source_id: olist
+terms:
+  - term_name: Gross Revenue
+    term_type: metric
+    definition: Total value paid by customers across all payment methods.
+    sql_expression: SUM(payment_value)
+    base_table: sales.order_payments
+    mapped_columns:
+      - payment_value
+    synonyms:
+      - total revenue
+      - sales volume
+      - total payments
+    status: approved
+
+  - term_name: Net Item Revenue
+    term_type: metric
+    definition: Total merchandise sales value excluding freight charges.
+    sql_expression: SUM(price)
+    base_table: sales.order_items
+    mapped_columns:
+      - price
+    synonyms:
+      - product revenue
+      - total item sales
+    status: approved
+
+  - term_name: Delivered Orders
+    term_type: concept
+    definition: Orders that reached the customer successfully.
+    sql_expression: order_status = 'delivered'
+    base_table: sales.orders
+    mapped_columns:
+      - order_status
+    synonyms:
+      - completed orders
+      - fulfilled orders
+    status: approved
+
+  - term_name: Delivery Delay Days
+    term_type: metric
+    definition: Days between actual customer delivery and original estimated delivery date. Positive indicates late delivery.
+    sql_expression: EXTRACT(day FROM (order_delivered_customer_date - order_estimated_delivery_date))
+    base_table: sales.orders
+    mapped_columns:
+      - order_delivered_customer_date
+      - order_estimated_delivery_date
+    synonyms:
+      - shipping delay
+      - delivery lateness
+      - delay days
+    status: approved
+
+  - term_name: Average Review Score
+    term_type: metric
+    definition: Mean satisfaction rating submitted by customers (1 to 5 scale).
+    sql_expression: AVG(review_score)
+    base_table: customer.order_reviews
+    mapped_columns:
+      - review_score
+    synonyms:
+      - customer satisfaction
+      - CSAT
+      - average rating
+    status: approved
+
+  - term_name: Freight Share
+    term_type: metric
+    definition: Proportion of shipping cost to total order item value plus freight.
+    sql_expression: SUM(freight_value) / NULLIF(SUM(price + freight_value), 0)
+    base_table: sales.order_items
+    mapped_columns:
+      - freight_value
+      - price
+    synonyms:
+      - shipping cost ratio
+      - freight percentage
+    status: approved
+
+  - term_name: Lead Conversion Rate
+    term_type: metric
+    definition: Proportion of qualified marketing leads that successfully closed a sales deal.
+    sql_expression: COUNT(DISTINCT mql_id)
+    base_table: marketing.closed_deals
+    mapped_columns:
+      - mql_id
+    synonyms:
+      - deal conversion rate
+      - closed deal rate
+    status: approved

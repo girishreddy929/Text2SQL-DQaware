@@ -1,0 +1,66 @@
+source_id: bird:california_schools
+terms:
+  - term_name: Total SAT Score
+    term_type: metric
+    definition: Combined SAT score summing Reading, Math, and Writing averages.
+    sql_expression: '"AvgScrRead" + "AvgScrMath" + "AvgScrWrit"'
+    base_table: bird_california_schools.satscores
+    mapped_columns:
+      - AvgScrRead
+      - AvgScrMath
+      - AvgScrWrit
+    synonyms:
+      - composite SAT
+      - overall SAT score
+      - total score
+    status: approved
+
+  - term_name: High Poverty School
+    term_type: concept
+    definition: Schools where over 75 percent of students qualify for free or reduced-price meals.
+    sql_expression: '"Percent (%) Eligible Free (K-12)" > 75.0'
+    base_table: bird_california_schools.frpm
+    mapped_columns:
+      - Percent (%) Eligible Free (K-12)
+    synonyms:
+      - low income school
+      - disadvantaged school
+      - high FRPM school
+    status: approved
+
+  - term_name: Charter School
+    term_type: concept
+    definition: Independently run public schools operating under a charter agreement.
+    sql_expression: '"Charter" = 1'
+    base_table: bird_california_schools.schools
+    mapped_columns:
+      - Charter
+    synonyms:
+      - charter
+      - public charter
+    status: approved
+
+  - term_name: SAT Test Takers Count
+    term_type: metric
+    definition: Total number of Grade 12 students taking the SAT examination.
+    sql_expression: SUM("NumTstTakr")
+    base_table: bird_california_schools.satscores
+    mapped_columns:
+      - NumTstTakr
+    synonyms:
+      - examinees
+      - student examinee count
+      - test takers
+    status: approved
+
+  - term_name: Average FRPM Rate
+    term_type: metric
+    definition: Mean percentage of K-12 students eligible for free meals.
+    sql_expression: AVG("Percent (%) Eligible Free (K-12)")
+    base_table: bird_california_schools.frpm
+    mapped_columns:
+      - Percent (%) Eligible Free (K-12)
+    synonyms:
+      - average free lunch rate
+      - mean poverty share
+    status: approved
