@@ -1,0 +1,85 @@
+dev_tables.json : C:\Users\girish.reddy\vscode-projs\dqca-demo\data\bird\extracted\minidev\MINIDEV\dev_tables.json
+dev_databases   : C:\Users\girish.reddy\vscode-projs\dqca-demo\data\bird\extracted\minidev\MINIDEV\dev_databases 
+
+california_schools.frpm: cols=29 csv_rows=29 desc=23 value_desc=6 enc=utf-8-sig
+california_schools.satscores: cols=11 csv_rows=11 desc=11 value_desc=6 enc=utf-8-sig
+california_schools.schools: cols=49 csv_rows=49 desc=38 value_desc=34 enc=utf-8-sig
+card_games.cards: cols=74 csv_rows=74 desc=61 value_desc=50 enc=utf-8-sig
+card_games.foreign_data: cols=8 csv_rows=8 desc=7 value_desc=0 enc=utf-8-sig
+card_games.legalities: cols=4 csv_rows=4 desc=2 value_desc=2 enc=utf-8-sig
+card_games.sets: cols=21 csv_rows=21 desc=20 value_desc=2 enc=utf-8-sig
+card_games.set_translations: cols=4 csv_rows=4 desc=4 value_desc=0 enc=utf-8-sig
+card_games.rulings: cols=4 csv_rows=4 desc=3 value_desc=0 enc=utf-8-sig
+codebase_community.badges: cols=4 csv_rows=4 desc=4 value_desc=0 enc=utf-8-sig
+codebase_community.comments: cols=7 csv_rows=7 desc=7 value_desc=1 enc=utf-8-sig
+codebase_community.postHistory: cols=9 csv_rows=9 desc=9 value_desc=0 enc=utf-8-sig
+codebase_community.postLinks: cols=5 csv_rows=5 desc=5 value_desc=0 enc=utf-8-sig
+codebase_community.posts: cols=21 csv_rows=21 desc=21 value_desc=4 enc=utf-8-sig
+codebase_community.tags: cols=5 csv_rows=5 desc=5 value_desc=1 enc=utf-8-sig
+codebase_community.users: cols=14 csv_rows=14 desc=14 value_desc=2 enc=utf-8-sig
+codebase_community.votes: cols=6 csv_rows=6 desc=6 value_desc=0 enc=utf-8-sig
+debit_card_specializing.customers: cols=3 csv_rows=3 desc=3 value_desc=0 enc=utf-8-sig
+debit_card_specializing.gasstations: cols=4 csv_rows=4 desc=3 value_desc=0 enc=utf-8-sig
+debit_card_specializing.products: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+debit_card_specializing.transactions_1k: cols=9 csv_rows=9 desc=9 value_desc=1 enc=utf-8-sig
+debit_card_specializing.yearmonth: cols=3 csv_rows=3 desc=3 value_desc=0 enc=utf-8-sig
+european_football_2.Player_Attributes: cols=42 csv_rows=42 desc=42 value_desc=39 enc=latin-1
+european_football_2.Player: cols=7 csv_rows=7 desc=7 value_desc=1 enc=utf-8-sig
+european_football_2.League: cols=3 csv_rows=3 desc=3 value_desc=0 enc=utf-8-sig
+european_football_2.Country: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+european_football_2.Team: cols=5 csv_rows=5 desc=5 value_desc=0 enc=utf-8-sig
+european_football_2.Team_Attributes: cols=25 csv_rows=25 desc=25 value_desc=14 enc=latin-1
+european_football_2.Match: cols=115 csv_rows=115 desc=19 value_desc=2 enc=utf-8-sig
+financial.account: cols=4 csv_rows=4 desc=4 value_desc=1 enc=utf-8-sig
+financial.card: cols=4 csv_rows=4 desc=4 value_desc=2 enc=utf-8-sig
+financial.client: cols=4 csv_rows=4 desc=3 value_desc=1 enc=utf-8-sig
+financial.disp: cols=4 csv_rows=4 desc=4 value_desc=1 enc=utf-8-sig
+financial.district: cols=16 csv_rows=16 desc=14 value_desc=1 enc=utf-8-sig
+financial.loan: cols=7 csv_rows=7 desc=7 value_desc=4 enc=utf-8-sig
+financial.order: cols=6 csv_rows=6 desc=6 value_desc=2 enc=utf-8-sig
+financial.trans: cols=10 csv_rows=10 desc=6 value_desc=6 enc=utf-8-sig
+formula_1.circuits: cols=9 csv_rows=9 desc=8 value_desc=2 enc=utf-8-sig
+formula_1.constructors: cols=5 csv_rows=6 desc=6 value_desc=1 enc=utf-8-sig | missing=[] extra=['wins']
+formula_1.drivers: cols=9 csv_rows=9 desc=9 value_desc=1 enc=utf-8-sig
+formula_1.seasons: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+formula_1.races: cols=8 csv_rows=8 desc=8 value_desc=0 enc=utf-8-sig
+formula_1.constructorResults: cols=5 csv_rows=5 desc=5 value_desc=0 enc=utf-8-sig
+formula_1.constructorStandings: cols=7 csv_rows=7 desc=6 value_desc=1 enc=utf-8-sig
+formula_1.driverStandings: cols=7 csv_rows=7 desc=6 value_desc=1 enc=utf-8-sig
+formula_1.lapTimes: cols=6 csv_rows=6 desc=6 value_desc=1 enc=utf-8-sig
+formula_1.pitStops: cols=7 csv_rows=7 desc=7 value_desc=2 enc=utf-8-sig
+formula_1.qualifying: cols=9 csv_rows=9 desc=9 value_desc=4 enc=latin-1
+formula_1.status: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+formula_1.results: cols=18 csv_rows=18 desc=17 value_desc=6 enc=utf-8-sig
+student_club.event: cols=7 csv_rows=7 desc=7 value_desc=2 enc=utf-8-sig
+student_club.major: cols=4 csv_rows=4 desc=4 value_desc=0 enc=utf-8-sig
+student_club.zip_code: cols=6 csv_rows=6 desc=6 value_desc=1 enc=utf-8-sig
+student_club.attendance: cols=2 csv_rows=2 desc=2 value_desc=2 enc=utf-8-sig
+student_club.budget: cols=7 csv_rows=7 desc=7 value_desc=5 enc=latin-1
+student_club.expense: cols=7 csv_rows=7 desc=7 value_desc=4 enc=utf-8-sig
+student_club.income: cols=6 csv_rows=6 desc=6 value_desc=1 enc=utf-8-sig
+student_club.member: cols=9 csv_rows=9 desc=9 value_desc=2 enc=utf-8-sig
+superhero.alignment: cols=2 csv_rows=2 desc=2 value_desc=1 enc=utf-8-sig
+superhero.attribute: cols=2 csv_rows=2 desc=2 value_desc=1 enc=utf-8-sig
+superhero.colour: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+superhero.gender: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+superhero.publisher: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+superhero.race: cols=2 csv_rows=2 desc=2 value_desc=1 enc=utf-8-sig
+superhero.superhero: cols=12 csv_rows=12 desc=12 value_desc=3 enc=utf-8-sig
+superhero.hero_attribute: cols=3 csv_rows=3 desc=3 value_desc=1 enc=utf-8-sig
+superhero.superpower: cols=2 csv_rows=2 desc=2 value_desc=0 enc=utf-8-sig
+superhero.hero_power: cols=2 csv_rows=2 desc=2 value_desc=1 enc=utf-8-sig
+thrombosis_prediction.Examination: cols=13 csv_rows=13 desc=13 value_desc=4 enc=utf-8-sig
+thrombosis_prediction.Patient: cols=7 csv_rows=7 desc=7 value_desc=3 enc=utf-8-sig
+thrombosis_prediction.Laboratory: cols=44 csv_rows=44 desc=41 value_desc=39 enc=utf-8-sig
+toxicology.atom: cols=3 csv_rows=3 desc=3 value_desc=2 enc=utf-8-sig
+toxicology.bond: cols=3 csv_rows=3 desc=3 value_desc=2 enc=utf-8-sig
+toxicology.connected: cols=3 csv_rows=3 desc=3 value_desc=0 enc=utf-8-sig
+toxicology.molecule: cols=2 csv_rows=2 desc=2 value_desc=1 enc=utf-8-sig
+
+TOTAL {'cols': 798, 'matched': 798, 'desc': 653, 'value': 278}
+
+Sample (atom.csv), header keys: ['original_column_name', 'column_name', 'column_description', 'data_format', 'value_description']
+  {'original_column_name': 'atom_id', 'column_name': 'atom id', 'column_description': 'the unique id of atoms', 'data_format': 'text', 'value_description': ''}
+  {'original_column_name': 'molecule_id', 'column_name': 'molecule id', 'column_description': 'identifying the molecule to which the atom belongs', 'data_format': 'text', 'value_description': 'commonsense evidence:\nTRXXX_i represents ith atom of molecule TRXXX'}
+  {'original_column_name': 'element', 'column_name': '', 'column_description': 'the element of the toxicology', 'data_format': 'text', 'value_description': '\x95 cl: chlorine\n\x95 c: carbon\n\x95 h: hydrogen\n\x95 o: oxygen\n\x95 s: sulfur\n\x95 n: nitrogen\n\x95 p: phosphorus\n\x95 na: sodium\n\x95 br: bromine\n\x95 f: fluorine\n\x95 i: iodine\n\x95 sn: Tin\n\x95 pb: lead\n\x95 te: tellurium\n\x95 ca: Calcium'}
