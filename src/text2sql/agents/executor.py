@@ -1,67 +1,56 @@
-"""Database Executor node for LangGraph workflow."""
+# src/text2sql/agents/executor.py
+from sqlalchemy import text
+from src.common.db import get_reader_engine
+from src.common.logging import get_logger
 
-from __future__ import annotations
-from typing import Any
-from src.adapters.db.base import DBConnector
-from src.common.db import get_connector
-from src.text2sql.agents.state import AgentState
+logger = get_logger(__name__)
 
 
-def resolve_search_path(source_id: str) -> str | None:
+def resolve_search_path(source_id: str) -> str:
+    """Determines the correct search_path based on the source_id."""
     if source_id.startswith("bird:"):
-        db_id = source_id.split(":", 1)[1]
+        db_id = source_id.split(":")[1]
         return f"bird_{db_id}"
-    return None
+    return "public"
 
 
-def sql_executor_node(
-    state: AgentState,
-    connector: DBConnector | None = None,
-) -> dict[str, Any]:
-    """Node: executes validated SQL under t2s_reader with schema isolation."""
-    if not state.get("is_valid_sql") or not state.get("generated_sql"):
-        return {
-            "execution_result": None,
-            "column_names": None,
-            "row_count": 0,
-            "error_message": "SQL validation failed or SQL missing prior to execution.",
-        }
-
-    sql = state["generated_sql"]
+def sql_executor_node(state: dict, connector=None) -> dict:
+    """Executes the validated SQL against the database."""
+    sql = state.get("generated_sql")
     source_id = state.get("source_id", "olist")
+
+    if not sql:
+        return {"error_message": "No SQL to execute."}
+
+    logger.info(f"Executing SQL for source '{source_id}'...")
+
+    engine = get_reader_engine()
     search_path = resolve_search_path(source_id)
-    active_connector = connector or get_connector(read_only=True)
 
     try:
-        qr = active_connector.run_query(sql, search_path=search_path)
-        return {
-            "execution_result": qr.rows,
-            "column_names": qr.columns,
-            "row_count": qr.row_count,
-            "error_message": None,
-        }
-    except Exception as exc:
-        return {
-            "execution_result": None,
-            "column_names": None,
-            "row_count": 0,
-            "error_message": str(exc),
-        }
+        with engine.connect() as conn:
+            # Set search path for BIRD databases
+            if search_path != "public":
+                conn.execute(text(f"SET LOCAL search_path = {search_path}"))
 
+            # Execute query
+            res = conn.execute(text(sql))
 
-if __name__ == "__main__":
-    from src.text2sql.agents.state import create_initial_state
+            # FIX: Use .mappings() to return a list of dicts, not tuples
+            rows = [dict(row) for row in res.mappings()]
 
-    # Test valid execution
-    st = create_initial_state("test")
-    st["is_valid_sql"] = True
-    st["generated_sql"] = "SELECT count(*) FROM sales.orders"
-    res = sql_executor_node(st)
-    print("Valid run:", res["row_count"], "row(s) |", res["execution_result"])
+            # Extract column names from the first row if available
+            cols = list(rows[0].keys()) if rows else []
 
-    # Test execution error handling
-    st_err = create_initial_state("test")
-    st_err["is_valid_sql"] = True
-    st_err["generated_sql"] = "SELECT nonexistent_column FROM sales.orders"
-    res_err = sql_executor_node(st_err)
-    print("Error caught:", res_err["error_message"])
+            logger.info(f"Execution successful. Returned {len(rows)} rows.")
+            return {
+                "execution_result": rows,
+                "column_names": cols,
+                "row_count": len(rows),
+                "error_message": "",
+            }
+
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Execution failed: {err_msg}")
+        return {"error_message": err_msg, "execution_result": [], "row_count": 0}

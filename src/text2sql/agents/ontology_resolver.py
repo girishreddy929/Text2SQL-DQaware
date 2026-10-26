@@ -28,12 +28,11 @@ def load_ontology_terms(source_id: str) -> list[dict[str, Any]]:
         return []
 
 
-def match_terms(
-    question: str, terms: list[dict[str, Any]]
-) -> dict[str, dict[str, Any]]:
+def match_terms(question: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Identifies mentioned ontology terms by name or synonym substring matching."""
     q_lower = question.lower()
-    resolved: dict[str, dict[str, Any]] = {}
+    resolved: list[dict[str, Any]] = []
+    seen_names = set()
 
     for term in terms:
         name = term.get("term_name", "")
@@ -42,13 +41,19 @@ def match_terms(
 
         # Match if the full candidate phrase appears in the user query
         if any(c in q_lower for c in candidates if len(c) > 2):
-            resolved[name] = {
-                "term_type": term.get("term_type"),
-                "definition": term.get("definition"),
-                "sql_expression": term.get("sql_expression"),
-                "base_table": term.get("base_table"),
-                "mapped_columns": term.get("mapped_columns", []),
-            }
+            if name not in seen_names:
+                # FIX: Append as a dictionary to a list, including the term_name
+                resolved.append(
+                    {
+                        "term_name": name,
+                        "term_type": term.get("term_type"),
+                        "definition": term.get("definition"),
+                        "sql_expression": term.get("sql_expression"),
+                        "base_table": term.get("base_table"),
+                        "mapped_columns": term.get("mapped_columns", []),
+                    }
+                )
+                seen_names.add(name)
 
     return resolved
 
@@ -60,11 +65,11 @@ def ontology_resolver_node(state: AgentState) -> dict[str, Any]:
     intent = state.get("intent", "data_question")
 
     if intent not in ("data_question", "metadata_question"):
-        return {"resolved_terms": {}}
+        return {"resolved_terms": []}
 
     terms = load_ontology_terms(source_id)
     if not terms:
-        return {"resolved_terms": {}}
+        return {"resolved_terms": []}
 
     resolved = match_terms(question, terms)
     if resolved:
@@ -72,7 +77,7 @@ def ontology_resolver_node(state: AgentState) -> dict[str, Any]:
             "Resolved %d ontology term(s) for source '%s': %s",
             len(resolved),
             source_id,
-            list(resolved.keys()),
+            [t["term_name"] for t in resolved],
         )
 
     return {"resolved_terms": resolved}
@@ -87,7 +92,7 @@ if __name__ == "__main__":
     }  # type: ignore
 
     out = ontology_resolver_node(test_state)
-    for name, details in out["resolved_terms"].items():
-        print(f"Term:  {name}")
+    for details in out["resolved_terms"]:
+        print(f"Term:  {details['term_name']}")
         print(f"Table: {details['base_table']}")
         print(f"SQL:   {details['sql_expression']}\n")

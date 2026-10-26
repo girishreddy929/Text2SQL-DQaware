@@ -1,91 +1,83 @@
-"""Agent state definitions for TrustSQL LangGraph multi-agent architecture."""
-
-from __future__ import annotations
-from typing import Any, Literal, TypedDict
-
+# src/text2sql/agents/state.py
+from typing import TypedDict, Literal, Any
 
 IntentType = Literal[
-    "data_question",
-    "dq_question",
-    "metadata_question",
-    "out_of_scope",
+    "data_question", "dq_question", "metadata_question", "out_of_scope", "unknown"
 ]
 
 
 class AgentState(TypedDict, total=False):
-    # User Inputs & Routing
+    # Input & Context
     question: str
-    rewritten_question: str | None
-    chat_history: list[dict[str, str]]
-    intent: IntentType
+    rewritten_question: str
+    chat_history: list[dict]
     source_id: str
-    evidence: str | None
+    evidence: str
+    eval_mode: bool  # <--- ADDED THIS KEY
 
-    # Cache & Clarification
-    cache_hit: bool
+    # Routing & Clarification
+    intent: IntentType
     needs_clarification: bool
-    clarification_question: str | None
+    clarification_question: str
 
-    # Schema & Metadata Context
-    resolved_terms: list[dict[str, Any]]
+    # Cache
+    cache_hit: bool
+
+    # Schema & Ontology
+    resolved_terms: list[dict]
     selected_domains: list[str]
     selected_tables: list[str]
     selected_columns: list[str]
-    join_path: list[dict[str, Any]]
+    join_path: str
 
-    # SQL Generation, Validation, & Correction Loop
-    generated_sql: str | None
-    reasoning: str | None
-    validation_errors: list[str]
+    # Generation & Validation
+    generated_sql: str
+    reasoning: str
+    validation_errors: str
     is_valid_sql: bool
+
+    # Execution & Retries
     retry_count: int
     max_retries: int
-
-    # Execution & Results
-    execution_result: list[tuple[Any, ...]] | None
-    column_names: list[str] | None
-    error_message: str | None
+    execution_result: list[dict]
+    column_names: list[str]
+    error_message: str
     row_count: int
 
-    # DQ & Final Synthesis
+    # Final Output
     dq_warnings: list[str]
-    final_answer: str | None
-    chart_suggestion: dict[str, Any] | None
+    final_answer: str
+    chart_suggestion: str
 
 
-def create_initial_state(
-    question: str,
-    source_id: str = "olist",
-    evidence: str | None = None,
-    max_retries: int = 3,
-) -> AgentState:
-    """Create a clean initial state for graph execution."""
+def create_initial_state() -> AgentState:
     return {
-        "question": question,
-        "rewritten_question": None,
+        "question": "",
+        "rewritten_question": "",
         "chat_history": [],
-        "intent": "data_question",
-        "source_id": source_id,
-        "evidence": evidence,
-        "cache_hit": False,
+        "source_id": "olist",
+        "evidence": "",
+        "eval_mode": False,
+        "intent": "unknown",
         "needs_clarification": False,
-        "clarification_question": None,
+        "clarification_question": "",
+        "cache_hit": False,
         "resolved_terms": [],
         "selected_domains": [],
         "selected_tables": [],
         "selected_columns": [],
-        "join_path": [],
-        "generated_sql": None,
-        "reasoning": None,
-        "validation_errors": [],
+        "join_path": "",
+        "generated_sql": "",
+        "reasoning": "",
+        "validation_errors": "",
         "is_valid_sql": False,
         "retry_count": 0,
-        "max_retries": max_retries,
-        "execution_result": None,
-        "column_names": None,
-        "error_message": None,
+        "max_retries": 3,
+        "execution_result": [],
+        "column_names": [],
+        "error_message": "",
         "row_count": 0,
         "dq_warnings": [],
-        "final_answer": None,
-        "chart_suggestion": None,
+        "final_answer": "",
+        "chart_suggestion": "",
     }

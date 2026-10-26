@@ -1,3 +1,4 @@
+# src/metadata/kg_graph.py
 """src/metadata/kg_graph.py: NetworkX graph loader and join path finder."""
 
 from __future__ import annotations

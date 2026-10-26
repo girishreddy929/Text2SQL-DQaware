@@ -1,3 +1,4 @@
+# src/text2sql/agents/corrector.py
 """Error Corrector agent node for LangGraph workflow."""
 
 from __future__ import annotations
@@ -28,9 +29,19 @@ RULES:
 def build_corrector_prompt(state: AgentState, schema_ctx: str) -> str:
     question = state.get("rewritten_question") or state["question"]
     failed_sql = state.get("generated_sql", "None")
-    errors = state.get("validation_errors") or []
+
+    # FIX: Safely build the errors list whether validation_errors is a string or list
+    errors = []
+    val_errs = state.get("validation_errors")
+    if val_errs:
+        if isinstance(val_errs, list):
+            errors.extend(val_errs)
+        else:
+            errors.append(str(val_errs))
+
     if state.get("error_message"):
-        errors.append(state["error_message"])
+        errors.append(str(state["error_message"]))
+
     error_summary = (
         "\n".join(f"- {e}" for e in errors) if errors else "Unknown execution error."
     )
@@ -75,7 +86,7 @@ def sql_corrector_node(state: AgentState) -> dict[str, Any]:
             "selected_tables": output.tables_used,
             "retry_count": current_retry,
             "error_message": None,
-            "validation_errors": [],
+            "validation_errors": "",
             "is_valid_sql": True,
         }
     except Exception as exc:
@@ -89,10 +100,11 @@ def sql_corrector_node(state: AgentState) -> dict[str, Any]:
 if __name__ == "__main__":
     from src.text2sql.agents.state import create_initial_state
 
-    st = create_initial_state("How many orders exist?")
+    st = create_initial_state()
+    st["question"] = "How many orders exist?"
     st["generated_sql"] = "SELECT count(*) FROM sales.nonexistent_orders_table"
     st["error_message"] = 'relation "sales.nonexistent_orders_table" does not exist'
     repaired = sql_corrector_node(st)
-    print("Repaired SQL:", repaired["generated_sql"])
-    print("Retry Count:", repaired["retry_count"])
-    print("Reasoning:", repaired["reasoning"])
+    print("Repaired SQL:", repaired.get("generated_sql"))
+    print("Retry Count:", repaired.get("retry_count"))
+    print("Reasoning:", repaired.get("reasoning"))

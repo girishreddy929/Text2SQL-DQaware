@@ -14,3 +14,5 @@ ipykernel>=6.29
 networkx>=3.4,<4.0
 sqlglot>=25.0.0
 langgraph>=0.2.0
+fastapi>=0.110.0
+uvicorn>=0.29.0

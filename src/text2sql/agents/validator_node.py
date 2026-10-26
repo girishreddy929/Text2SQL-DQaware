@@ -1,58 +1,55 @@
-"""SQL Validator node for LangGraph workflow."""
-
-from __future__ import annotations
-from typing import Any
-from src.text2sql.agents.state import AgentState
+# src/text2sql/agents/validator_node.py
+from src.common.logging import get_logger
 from src.text2sql.baseline.validator import validate_and_clean_sql
 
-FORBIDDEN_SCHEMAS = {"raw", "dq", "meta", "app"}
+logger = get_logger(__name__)
+
+FORBIDDEN_SCHEMAS = ["raw", "dq", "meta", "app"]
 
 
-def sql_validator_node(state: AgentState) -> dict[str, Any]:
-    """Node: validates AST safety, permitted schemas, and LIMIT injection."""
-    raw_sql = state.get("generated_sql")
-    if not raw_sql:
+def sql_validator_node(state: dict) -> dict:
+    """Validates the generated SQL for safety and syntax."""
+    sql = state.get("generated_sql", "")
+
+    if not sql:
         return {
             "is_valid_sql": False,
-            "validation_errors": ["No SQL was generated."],
+            "validation_errors": "No SQL generated.",
+            "error_message": "No SQL generated.",
         }
 
-    val = validate_and_clean_sql(raw_sql, default_limit=100)
-    if not val.is_valid:
+    # Disable LIMIT injection if we are in evaluation mode
+    eval_mode = state.get("eval_mode", False)
+    default_limit = None if eval_mode else 100
+
+    val_result = validate_and_clean_sql(
+        sql, dialect="postgres", default_limit=default_limit
+    )
+
+    if not val_result.is_valid:
+        logger.warning(f"SQL Validation failed: {val_result.error_message}")
         return {
             "is_valid_sql": False,
-            "validation_errors": [val.error_message or "Invalid SQL syntax."],
+            "validation_errors": val_result.error_message,
+            "error_message": f"Validation Error: {val_result.error_message}",
         }
 
-    # Guardrail: check forbidden schemas
-    for tbl in val.tables:
-        if "." in tbl:
-            schema_prefix = tbl.split(".", 1)[0].lower()
-            if schema_prefix in FORBIDDEN_SCHEMAS:
-                return {
-                    "is_valid_sql": False,
-                    "validation_errors": [
-                        f"Access to internal schema '{schema_prefix}' is forbidden."
-                    ],
-                }
+    # Check for forbidden schemas
+    for table in val_result.tables:
+        schema = table.split(".")[0].lower() if "." in table else "public"
+        if schema in FORBIDDEN_SCHEMAS:
+            msg = f"Access to internal schema '{schema}' is forbidden."
+            logger.warning(msg)
+            return {
+                "is_valid_sql": False,
+                "validation_errors": msg,
+                "error_message": f"Security Error: {msg}",
+            }
 
+    logger.info("SQL Validation passed.")
     return {
         "is_valid_sql": True,
-        "generated_sql": val.cleaned_sql,
-        "selected_tables": val.tables,
-        "validation_errors": [],
+        "generated_sql": val_result.cleaned_sql,
+        "validation_errors": "",
+        "error_message": "",
     }
-
-
-if __name__ == "__main__":
-    from src.text2sql.agents.state import create_initial_state
-
-    # Test safe query
-    st1 = create_initial_state("test")
-    st1["generated_sql"] = "SELECT * FROM sales.orders"
-    print("Safe SQL validation:", sql_validator_node(st1))
-
-    # Test forbidden schema
-    st2 = create_initial_state("test")
-    st2["generated_sql"] = "SELECT * FROM meta.tables"
-    print("Forbidden schema validation:", sql_validator_node(st2))

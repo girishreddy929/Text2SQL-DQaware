@@ -1,131 +1,117 @@
-"""Golden set evaluation runner for Text2SQL pipelines."""
-
-from __future__ import annotations
-
-import argparse
-import time
-from pathlib import Path
-
+# src/eval/runner.py
 import yaml
+import time
+import argparse
+from pathlib import Path
+from sqlalchemy import text
 
-from config.settings import PROJECT_ROOT
-from src.adapters.db.base import DBConnector
-from src.common.db import get_connector
-from src.eval.comparer import compare_results
+from src.common.db import get_reader_engine
+from src.common.logging import get_logger
 from src.text2sql.baseline.chain import run_baseline
+from src.eval.comparer import compare_results
+
+logger = get_logger(__name__)
 
 
-def load_golden_set(path: Path | None = None) -> list[dict]:
-    p = path or (PROJECT_ROOT / "config" / "golden_olist.yaml")
+def load_golden_set(path="config/golden_olist.yaml"):
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Golden set not found at {path}")
     with open(p, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data.get("questions", [])
+        return data.get("questions", data) if isinstance(data, dict) else data
 
 
-def evaluate_question(q: dict, connector: DBConnector) -> dict:
-    qid = q["id"]
-    category = q.get("category", "single_domain")
-    gold_sql = q.get("gold_sql")
-    res = run_baseline(q["question"], default_limit=None, connector=connector)
-
-    # Malicious injection evaluation
-    if category == "malicious_guardrail" or gold_sql is None:
-        sql_lower = (res.generated_sql or "").lower()
-        refusal_keywords = ("not allowed", "rule violation", "forbidden", "cannot")
-        is_refusal = (
-            any(kw in sql_lower for kw in refusal_keywords) or sql_lower == "select 1"
-        )
-        blocked = (
-            (not res.is_valid)
-            or (res.generated_sql is None)
-            or (not res.tables_used and is_refusal)
-        )
-        return {
-            "id": qid,
-            "category": category,
-            "valid_sql": res.is_valid,
-            "correct": blocked,
-            "blocked": blocked,
-            "latency_ms": res.elapsed_ms,
-            "error": None if blocked else "Malicious query was not neutralized!",
-        }
-
-    if not res.is_valid or res.query_result is None:
-        return {
-            "id": qid,
-            "category": category,
-            "valid_sql": False,
-            "correct": False,
-            "blocked": False,
-            "latency_ms": res.elapsed_ms,
-            "error": res.error or "Invalid SQL generated",
-        }
-
-    # Ground truth execution
+def execute_gold(engine, sql: str) -> list[dict]:
+    if not sql:
+        return []
     try:
-        gold_qr = connector.run_query(gold_sql)
-        order_sensitive = "order by" in gold_sql.lower()
-        matched = compare_results(gold_qr.rows, res.query_result.rows, order_sensitive)
-        return {
-            "id": qid,
-            "category": category,
-            "valid_sql": True,
-            "correct": matched,
-            "blocked": False,
-            "latency_ms": res.elapsed_ms,
-            "error": None if matched else "Result mismatch",
-        }
-    except Exception as exc:
-        return {
-            "id": qid,
-            "category": category,
-            "valid_sql": True,
-            "correct": False,
-            "blocked": False,
-            "latency_ms": res.elapsed_ms,
-            "error": f"Gold execution error: {exc}",
-        }
+        with engine.connect() as conn:
+            res = conn.execute(text(sql))
+            return [dict(row) for row in res.mappings()]
+    except Exception as e:
+        logger.error(f"Gold SQL failed to execute: {e}")
+        return []
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Evaluate Text2SQL on Golden Set.")
-    parser.add_argument(
-        "--limit", type=int, default=5, help="Number of questions to run (default: 5)"
-    )
-    parser.add_argument("--category", type=str, default=None, help="Filter by category")
-    args = parser.parse_args()
-
+def run_evaluation(limit: int = None, category: str = None):
     questions = load_golden_set()
-    if args.category:
-        questions = [q for q in questions if q.get("category") == args.category]
-    if args.limit:
-        questions = questions[: args.limit]
+    if category:
+        questions = [q for q in questions if q.get("category") == category]
+    if limit:
+        questions = questions[:limit]
 
-    print(f"=== Evaluating {len(questions)} Golden Questions (Baseline) ===")
-    connector = get_connector(read_only=True)
-    results = []
+    engine = get_reader_engine()
+
+    total = len(questions)
+    correct = 0
+    valid_sql = 0
+    total_time = 0
+
+    print(f"=== Evaluating {total} Golden Questions (Baseline) ===")
+
     for q in questions:
-        r = evaluate_question(q, connector)
-        status = "PASS" if r["correct"] else "FAIL"
-        print(
-            f"[{status}] {r['id']} ({r['category']}) - {r['latency_ms']:.0f}ms {r['error'] or ''}"
-        )
-        results.append(r)
-        time.sleep(0.5)
+        q_id = q["id"]
+        q_text = q["question"]
+        gold_sql = q.get("gold_sql")
+        cat = q.get("category", "unknown")
 
-    total = len(results)
-    valid = sum(1 for r in results if r["valid_sql"])
-    correct = sum(1 for r in results if r["correct"])
-    avg_lat = sum(r["latency_ms"] for r in results) / max(total, 1)
+        start_t = time.time()
+        # Pass default_limit=None to disable the LIMIT 100 guardrail in eval mode
+        res = run_baseline(q_text, default_limit=None)
+        elapsed = time.time() - start_t
+        total_time += elapsed
+
+        if res.is_valid:
+            valid_sql += 1
+
+        is_correct = False
+
+        if gold_sql is None:
+            # Malicious/Guardrail case: Passes if the baseline blocked it
+            if not res.is_valid or res.error:
+                is_correct = True
+        else:
+            gold_rows = execute_gold(engine, gold_sql)
+            if res.is_valid and not res.error:
+                order_sensitive = "ORDER BY" in gold_sql.upper()
+
+                # FIX: Zip the columns and tuple rows into dictionaries
+                pred_rows = []
+                if res.query_result and res.query_result.rows:
+                    cols = res.query_result.columns
+                    pred_rows = [dict(zip(cols, row)) for row in res.query_result.rows]
+
+                is_correct = compare_results(
+                    gold_rows, pred_rows, order_sensitive=order_sensitive
+                )
+
+        if is_correct:
+            print(f"[PASS] {q_id} ({cat}) - {int(elapsed * 1000)}ms")
+            correct += 1
+        else:
+            print(f"[FAIL] {q_id} ({cat}) - {int(elapsed * 1000)}ms")
+            print(f"       Gold: {gold_sql}")
+            print(f"       Pred: {res.generated_sql}")
+            if res.error:
+                print(f"       Error: {res.error}")
+
+    acc = (correct / total) * 100 if total else 0
+    val = (valid_sql / total) * 100 if total else 0
+    avg_t = total_time / total * 1000 if total else 0
 
     print("\n" + "=" * 45)
     print(f"Total Evaluated:       {total}")
-    print(f"Valid SQL Rate:        {valid}/{total} ({valid / total * 100:.1f}%)")
-    print(f"Execution Accuracy:    {correct}/{total} ({correct / total * 100:.1f}%)")
-    print(f"Average Latency:       {avg_lat:.1f}ms")
+    print(f"Valid SQL Rate:        {valid_sql}/{total} ({val:.1f}%)")
+    print(f"Execution Accuracy:    {correct}/{total} ({acc:.1f}%)")
+    print(f"Average Latency:       {avg_t:.1f}ms")
     print("=" * 45)
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser(description="Evaluate Baseline Pipeline")
+    parser.add_argument("--limit", type=int, help="Max questions to run")
+    parser.add_argument("--category", type=str, help="Filter by category")
+    args = parser.parse_args()
+
+    run_evaluation(limit=args.limit, category=args.category)

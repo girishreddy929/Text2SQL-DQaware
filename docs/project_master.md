@@ -7,8 +7,8 @@ Part 7 = code inventory Blocks 7-8 and start instructions. Do not reply until I 
 ## YOUR ROLE
 You are my senior AI engineer and mentor. I am a beginner in Gen AI; I know the basics of the GCP platform. We
 build TrustSQL end to end in my local VS Code, ONE BLOCK AT A TIME, validating each block before moving on.
-Blocks 0, 1, 2, 2B, 3, 4, 5, 7, 8, 9, 10, 11, 12, 12B, 13, and 14 are DONE. Block 6 remains DEFERRED:
-do not build it unless I ask (probably at the very end). The next block is Block 15 (Semantic Cache). This prompt carries everything learned so far, so I do not need to re-share old scripts.
+Blocks 0, 1, 2, 2B, 3, 4, 5, 7, 8, 9, 10, 11, 12, 12B, 13,  14,15,16,17 are DONE. Block 6 remains DEFERRED:
+do not build it unless I ask (probably at the very end). The next block is Block 17b (Semantic Cache). This prompt carries everything learned so far, so I do not need to re-share old scripts.
 
 ## MY SETUP
 - OS: Windows. PRIMARY SHELL IS cmd (Command Prompt), not PowerShell. Give cmd commands first (type, copy,
@@ -163,6 +163,9 @@ Key idea: DQCA feeds Metadata, Metadata feeds the Agents; agents warn users when
   SELECT-only safety and blocks internal schema access (raw, dq, meta, app). (d) Self-healing loop: Postgres runtime exceptions
   and AST failures route to sql_corrector_node to repair SQL with a hard ceiling of max_retries=3.
 - BLOCK 14 DECISIONS: (a) t2s_reader granted USAGE on dq and SELECT on dq.latest_results and dq.latest_profiles views only (underlying tables remain hidden; Postgres view ownership chaining applies). (b) Query Rewriter incorporates a fast-path: if chat_history is empty, returns original query without an LLM invocation. (c) Clarifier is conservative: flags ambiguity only when essential business constraints are completely absent without a standard default. (d) Ontology Resolver identifies business metrics/terms from YAML/meta and injects approved SQL formulas into state['resolved_terms']. (e) DQ Advisor is dimension-driven: dynamically maps technical scan metrics into executive advisories by dimension (Timeliness, Completeness, Integrity, Validity, Consistency) without hardcoding rule IDs. (f) Specialist agent tracks (dq_question, metadata_question, out_of_scope) provide dedicated responses, bypassing SQL generation entirely. (g) backward-compatibility alias build_core_graph = build_agentic_graph preserved in graph.py.
+- BLOCK 15/16 DECISIONS: (a) Semantic Cache uses pgvector HNSW index in a new hidden `app` schema. (b) Cache hits are strictly verified by an LLM to prevent parameter mismatch (e.g., 2022 vs 2023). (c) Cross-Domain routing uses Vector Search (Schema Linker) to find tables, and NetworkX (Domain Selector) to inject deterministic JOIN paths, bypassing LLM join hallucinations.
+- BLOCK 17 DECISIONS: (a) Evaluation comparer ignores column aliases by comparing values positionally. (b) Agentic evaluation disables the auto-LIMIT guardrail via an `eval_mode` flag in AgentState. (c) Router explicitly classifies "distinct values" and "statuses" as `data_question` to prevent misrouting to the metadata specialist.
+- BLOCK 17B DECISIONS: (a) FastAPI serves as the bridge between the LangGraph engine and the frontend. (b) Security is handled via a simple HTTP Bearer token (`TRUSTSQL_API_KEY`). (c) Positive feedback via the `/feedback` endpoint automatically writes the query to the Semantic Cache.
 
 
 ## ACCELERATOR REQUIREMENTS (existing company Text2SQL accelerator)
@@ -190,8 +193,7 @@ validated cache.
   pydantic, pydantic-settings, PyYAML, python-dotenv, pytest.
 - GCP: BigQuery (google-cloud-bigquery) + Dataplex DQ/Profiling scans: DEFERRED (Block 6).
 - API: FastAPI + uvicorn (+ httpx). UI: Streamlit (+ Plotly) calling the API. Tracing optional: LangSmith.
-- Currently in requirements.txt: sqlalchemy, psycopg[binary], pandas, pydantic, pydantic-settings, python-dotenv,
-  PyYAML, langchain-core, langchain-google-genai, pytest, kaggle, ipykernel, networkx, sqlglot, langgraph.
+- Currently in requirements.txt: sqlalchemy, psycopg[binary], pandas, pydantic, pydantic-settings, python-dotenv, PyYAML, langchain-core, langchain-google-genai, pytest, kaggle, ipykernel, networkx, sqlglot, langgraph, fastapi, uvicorn.
 
 ## DATA AND POSTGRES SCHEMAS
 Olist Brazilian E-Commerce (9 CSVs) and Olist Marketing Funnel (2 CSVs) via the Kaggle API; BIRD Mini-Dev (PG).
@@ -315,7 +317,9 @@ tests/       test_block0.py, test_block1.py, test_block2.py, test_block2b.py, te
              test_block4.py (22), test_block5.py (20), test_block7.py (15), test_block8.py (16),
              test_block9.py (8), test_block10.py (8), test_block11.py (5),
              test_block12.py (11), test_block12b.py (5), test_block13.py (8), test_block14.py (9)       [suite = 193 passed]
-NOT created yet: app/, notebooks/, docs/ (docs/decisions.md must record the BIRD licence)
+src/app/     __init__.py, init_schema.py, cache.py
+src/api/     __init__.py, models.py, security.py, main.py, test_client.py
+NOT created yet: notebooks/, docs/ (docs/decisions.md must record the BIRD licence)
 ```
 Every folder under src/ and config/ has an __init__.py. Run modules from the project root.
 
@@ -347,6 +351,10 @@ shown in a report. Guardrails block all destructive SQL. SQL Accuracy %, Visuali
 Extensibility are reported. Clear docs and a demo flow for my manager.
 
 ## CUMULATIVE GOTCHAS (carry into later blocks)
+- LangGraph silently drops state keys that are not explicitly defined in the `TypedDict` (e.g., `eval_mode`). Always update `AgentState` when adding new keys.
+- SQLAlchemy `res.mappings()` must be used to return dictionaries; raw `res` returns tuples which breaks dictionary-based comparers.
+- Python's `:.2f` rounds up (e.g., 99.998 -> 100.00). Use `math.floor(val * 100) / 100.0` to truncate when displaying high-precision DQ failures to avoid logical contradictions.
+- Gemini Free Tier will throw `503 UNAVAILABLE` on heavier models (like Pro) during bulk evaluations. Stick to `gemini-3.5-flash-lite` or `gemini-1.5-flash-8b` for batch processing.
 - Postgres: `ORDER BY name` resolves to an OUTPUT column first; alias computed columns (AS _x) when sorting by the
   original column. `n_live_tup` is unreliable after a container restart; use count(*).
 - Avoid LIKE with % or backslashes inside SQLAlchemy text(); use left(x, n) = '...' or starts_with(x, '...').
@@ -404,6 +412,8 @@ Extensibility are reported. Clear docs and a demo flow for my manager.
 - Block 14: edit setup_roles.py to grant t2s_reader SELECT on dq.latest_results and dq.latest_profiles only;
   decide how agents read meta (views, never raw tables with draft rows if only approved should be used).
 - Block 18B: BIRD SQLite files and mini_dev_sqlite.json are ready for the SQLite adapter proof.
+
+
 
 # CODE INVENTORY (Blocks 0-11). Use these names; if a name is missing or unsure, ask me to paste the file.
 
@@ -793,12 +803,45 @@ admfname2/admlname2 97.56%, ext 96.95%, fundingtype 90.72% (legitimately optiona
 - src/text2sql/agents/graph.py: clarification_responder(state); answer_synthesizer(state); route_intent(state); route_clarification(state); route_after_validation(state); route_after_execution(state); build_agentic_graph(); build_core_graph alias; run_agentic_text2sql(question, source_id, evidence, chat_history, max_retries). Full LangGraph StateGraph pipeline.
 - tests/test_block14.py: 9 tests (8 no-DB, 1 db) covering fast paths, ambiguity checks, ontology matching, dynamic dimension formatting, table extraction, refusal, conditional routing, graph compilation, and live DB advisor execution.
 
+## P. Block 15: Semantic Cache (DONE)
+- sql/08_app_schema.sql (hand-written, idempotent): app.semantic_cache [8 cols: id PK, source_id, question, generated_sql, tables_used, embedding vector(768), feedback_score, created_at], HNSW cosine index.
+- src/app/init_schema.py (python -m src.app.init_schema [--reset]): init_app_schema(reset) applies the SQL and verifies that t2s_reader is blocked from accessing the app schema.
+- src/app/cache.py (python -m src.app.cache): CacheEntry model; SemanticCache class with add(), search(limit=3, threshold=0.85), and _embed() (truncates to 768 dims and L2 normalizes). Uses admin_engine.
+- src/text2sql/agents/cache_nodes.py (python -m src.text2sql.agents.cache_nodes): CacheVerification model; cache_lookup_node(state) finds vector matches and uses LLM to verify exact parameter matches; write_cache_feedback(state, score) helper for API integration.
+- src/text2sql/agents/graph.py: Updated to include cache_lookup_node. route_clarification routes to cache_lookup; route_after_cache routes to sql_executor on hit, or ontology_resolver on miss.
+
+## Q. Block 16: Cross-Domain Schema Linking (DONE)
+- src/text2sql/agents/schema_linker.py (python -m src.text2sql.agents.schema_linker): schema_linker_node(state) uses SchemaRetriever to find top-10 semantic matches for tables/columns and appends base tables from resolved ontology terms.
+- src/text2sql/agents/domain_selector.py (python -m src.text2sql.agents.domain_selector): domain_selector_node(state) uses NetworkX Knowledge Graph to find shortest join paths between selected tables, returning deterministic SQL join conditions.
+- src/text2sql/agents/generator.py: Updated build_targeted_schema_context to filter schema to only selected_tables. Prompt updated to inject {join_path}.
+- src/text2sql/agents/graph.py: Wired schema_linker and domain_selector into the main flow (ontology_resolver -> schema_linker -> domain_selector -> sql_generator).
+- tests/test_block16.py: 5 db tests verifying semantic cache, vector retrieval, KG multi-hop join discovery, and targeted schema filtering.
+
+## R. Block 17: Full Evaluation & Agentic Fixes (DONE)
+- src/eval/comparer.py: Updated to ignore column aliases by comparing values positionally, and handles Decimal/float normalization.
+- src/text2sql/agents/state.py: Added eval_mode boolean to AgentState to disable LIMIT 100 guardrail during testing.
+- src/text2sql/agents/executor.py: Updated to return dictionaries via .mappings() instead of raw tuples.
+- src/text2sql/agents/router.py: Prompt updated to explicitly classify "distinct values" and "statuses" as data_question.
+- src/text2sql/agents/ontology_resolver.py: Restored get_admin_engine() for meta schema access, and updated match_terms to return a list of dictionaries.
+- src/text2sql/agents/corrector.py: Fixed bug where it tried to .append() to a string validation_errors.
+- src/text2sql/agents/dq_advisor.py: Fixed rounding bug by truncating pass_pct to 2 decimals to prevent 99.99% from rounding up to 100.0%.
+- src/text2sql/agents/generator.py: Added prompt rules for ORDER BY, to_char(month), and LIMIT 10 for raw records.
+- src/eval/eval_agentic.py (python -m src.eval.eval_agentic): Runs the full 50-question Olist golden set through the Agentic pipeline.
+- src/eval/runner.py (python -m src.eval.runner): Runs the Baseline pipeline.
+
+## S. Block 17B: FastAPI Backend (DONE)
+- requirements.txt: Added fastapi>=0.110.0 and uvicorn>=0.29.0.
+- src/api/models.py: Pydantic schemas (QueryRequest, QueryResponse, FeedbackRequest).
+- src/api/security.py: verify_api_key using HTTPBearer token (default: trustsql-secret-key).
+- src/api/main.py: FastAPI app with CORS middleware. Endpoints: GET /health, POST /query (runs run_agentic_text2sql), POST /feedback (writes to semantic cache).
+- src/api/test_client.py: Built-in urllib script to test the protected /query endpoint.
+
 
 ## START NOW
 When I say "all parts sent":
-1. Reply with a 5-line summary of where we are (Blocks 0-5, 7-14 done; 193 tests passing; Block 6 deferred;
-   Block 15 Semantic Cache next).
+1. Reply with a 5-line summary of where we are (Blocks 0-5, 7-17b done; Block 6 deferred;
+   Block 17b next).
 2. Confirm you understood the rules (especially 11, 12, 17, 18, 22, 23), that cmd is my primary shell, and that at
    the end of every block you will ask if I want to update my master prompt and provide the exact section diffs.
 3. List exactly which files you need for Block 15 (probably none).
-4. Then wait for me to say "start Block 15".
+4. Then wait for me to say "start Block 18".

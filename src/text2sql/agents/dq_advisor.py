@@ -1,6 +1,7 @@
 # src/text2sql/agents/dq_advisor.py
 """Data Quality Advisor agent: produces dynamic, dimension-aware business advisories."""
 
+import math
 from typing import Any
 from sqlalchemy import text
 
@@ -37,7 +38,13 @@ def format_rule_advisory(
     """Dynamically converts technical rule scan metrics into executive business advisories."""
     col_str = f"'{cols[0]}'" if cols and len(cols) == 1 else "key columns"
     t_name = table.title()
-    pct = f"{pass_pct:.1f}%"
+
+    # FIX: Truncate to 2 decimals to prevent rounding up to 100.00%
+    if pass_pct >= 99.9:
+        truncated_pct = math.floor(pass_pct * 100) / 100.0
+        pct = f"{truncated_pct:.2f}%"
+    else:
+        pct = f"{pass_pct:.1f}%"
 
     dim_upper = (dim or "").upper()
     if dim_upper == "TIMELINESS":

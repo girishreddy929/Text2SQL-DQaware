@@ -16,4 +16,4 @@ data/bird/
 .cache/
 *.log
 
-#docs/
+docs/
