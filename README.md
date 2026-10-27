@@ -1,247 +1,129 @@
 # TrustSQL: DQ-Aware Agentic Text2SQL
 
-TrustSQL is an enterprise-grade Agentic Text2SQL platform that enables business users to query data using natural language while delivering accurate SQL, trustworthy results, and real-time Data Quality (DQ) advisories.
+TrustSQL is an enterprise-grade, modular Text2SQL accelerator. It allows business users to ask questions in plain English and receive syntactically correct SQL, the resulting data, and, crucially, **Data Quality (DQ) advisories** warning them if the underlying data is flawed.
 
-Unlike traditional Text2SQL systems that rely solely on LLM prompting, TrustSQL combines Knowledge Graphs, Vector Search, Data Quality Intelligence, and a LangGraph-powered multi-agent architecture to reduce hallucinations, improve schema understanding, and ensure reliable cross-domain querying.
-
----
-
-## 🚀 Key Capabilities
-
-✅ Natural Language → SQL Generation
-
-✅ Data Quality-Aware Query Responses
-
-✅ Knowledge Graph-Based Join Intelligence
-
-✅ Semantic Schema Linking with Vector Search
-
-✅ Multi-Agent LangGraph Orchestration
-
-✅ Self-Healing SQL Generation & Validation
-
-✅ Business Ontology-Driven Metrics
-
-✅ Cross-Domain Query Routing
-
-✅ Production-Ready FastAPI Backend
+Unlike standard Text2SQL wrappers, TrustSQL uses a multi-agent architecture (LangGraph) backed by a Knowledge Graph and Vector Search to eliminate hallucinations, self-heal SQL errors, and guarantee accurate cross-domain joins.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Core Architecture
 
-TrustSQL is organized into four core modules:
+TrustSQL is divided into four main modules:
 
-### Module A: Data Quality Intelligence (DQCA Engine)
+### 1. Module A: DQCA Engine (Data Quality)
+- Transparent, Dataplex-style data profiling and rule execution.
+- Supports 8 rule types:
+  - Non-Null
+  - Uniqueness
+  - Range
+  - Set
+  - Regex
+  - Row Conditions
+  - Table Conditions
+  - SQL Assertions
+- Auto-recommends rules based on data profiles.
 
-Provides automated data profiling, validation, and quality monitoring.
+### 2. Module B: Metadata Intelligence
 
-#### Features
-
-- Automated data profiling
-- Dataplex-style rule evaluation
-- Data quality scoring
-- Dynamic DQ advisory generation
-
-#### Supported Rule Types
-
-- Non-Null
-- Uniqueness
-- Range Validation
-- Set Membership
-- Regex Validation
-- Row Conditions
-- Table Conditions
-- SQL Assertions
-
----
-
-### Module B: Metadata Intelligence Layer
-
-#### Layer 1: Metadata Enrichment
-
-- LLM-generated table descriptions
-- LLM-generated column descriptions
-- Automated PII detection and tagging
+#### Layer 1: Descriptions
+- LLM-generated table and column descriptions.
+- Automatic PII tagging.
 
 #### Layer 2: Knowledge Graph
-
-NetworkX-powered metadata graph containing:
-
-- Tables
-- Columns
-- Relationships
-- Explicit Foreign Keys
-- Inferred Foreign Keys
-
-Benefits:
-
-- Accurate JOIN generation
-- Relationship discovery
-- Cross-domain navigation
-- Reduced hallucinations
+- NetworkX-powered graph of tables, columns, and inferred/explicit foreign keys.
+- Guarantees accurate SQL `JOIN` paths.
 
 #### Layer 3: Business Ontology
-
-Business definitions stored as YAML and injected directly into agent context.
-
-Example:
-
-```yaml
-gross_revenue:
-  definition: Total revenue before deductions
-  formula: order_value + shipping_charges
-```
-
-Benefits:
-
-- Consistent business logic
-- Metric standardization
-- Improved SQL accuracy
+- YAML-driven business metric definitions.
+- Example: "Gross Revenue".
+- Injected directly into LLM context.
 
 #### Layer 4: Vector Search
+- 768-dimensional Matryoshka embeddings.
+- Stored in `pgvector`.
+- Enables semantic schema linking.
 
-Semantic schema retrieval powered by:
+### 3. Module C: Agentic Text2SQL (LangGraph)
 
-- Gemini Embeddings
-- pgvector
-- Matryoshka Embeddings
+A stateful, multi-agent pipeline featuring:
 
-Capabilities:
+#### Router & Clarifier
+- Classifies intent.
+- Requests clarification for ambiguous questions.
 
-- Schema linking
-- Semantic search
-- Context reduction
-- Domain selection
+#### Semantic Cache
+- Bypasses LLM calls for previously answered questions.
 
----
+#### Schema Linker & Domain Selector
+- Uses Vector Search and Knowledge Graph.
+- Retrieves only relevant tables.
+- Provides exact join paths for cross-domain queries.
 
-### Module C: Agentic Text2SQL Engine
+#### Self-Healing Loop
+- Validates SQL AST using `sqlglot`.
+- Detects execution failures.
+- Automatically retries SQL correction up to 3 times.
 
-Built using LangGraph to orchestrate specialized agents.
+#### DQ Advisor
+- Attaches dimension-aware data quality warnings.
+- Alerts users when queried tables fail recent DQ checks.
 
-#### Agent Pipeline
-
-```text
-User Question
-       │
-       ▼
-Router Agent
-       │
-       ▼
-Clarifier Agent
-       │
-       ▼
-Semantic Cache
-       │
-       ▼
-Schema Linker
-       │
-       ▼
-Domain Selector
-       │
-       ▼
-SQL Generator
-       │
-       ▼
-SQL Validator
-       │
-       ▼
-Self-Healing Loop
-       │
-       ▼
-Query Execution
-       │
-       ▼
-DQ Advisor
-       │
-       ▼
-Final Response
-```
-
-#### Core Capabilities
-
-- Intent Classification
-- Ambiguity Resolution
-- Semantic Query Caching
-- Graph-Aware JOIN Generation
-- SQL Validation
-- Self-Healing Error Recovery
-- SQL Injection Protection
-- DQ-Aware Responses
+### 4. Module D: API & Product
+- FastAPI backend exposing REST endpoints.
+- Streamlit UI for:
+  - Conversational analytics
+  - Data visualization
+  - Semantic Cache feedback
 
 ---
 
-### Module D: API & Product Layer
+## 🚀 Tech Stack
 
-#### Current
-
-- FastAPI backend
-- REST APIs
-- Authentication support
-
-#### Upcoming
-
-- Streamlit Chat Interface
-- DQ Dashboards
-- Metadata Review Console
-- Ontology Management UI
-
----
-
-## 🛠️ Technology Stack
-
-### Application
-
-- Python 3.11+
-- FastAPI
-- LangGraph
-- LangChain
-- SQLAlchemy
-
-### Database
-
-- PostgreSQL 16
-- pgvector 0.8.7
-
-### AI Stack
-
-- Gemini Flash
-- Gemini Embeddings
-
-### Metadata & Validation
-
-- NetworkX
-- sqlglot
+- **Language:** Python 3.11+
+- **Database:** PostgreSQL 16 + `pgvector` (0.8.7)
+- **LLM:**
+  - `gemini-3.5-flash-lite` (chat)
+  - `gemini-embedding-001` (embeddings)
+- **Frameworks:**
+  - LangGraph
+  - LangChain
+  - FastAPI
+  - Streamlit
+  - SQLAlchemy
+  - NetworkX
+  - sqlglot
 
 ---
 
-## ⚙️ Setup
+## 🛠️ Setup Instructions
 
-### 1. Clone Repository
+### 1. Prerequisites
 
-```cmd
-git clone <repository_url>
-cd trustsql
-```
+- Docker Desktop running
+- Python 3.11+ installed
+- Windows Command Prompt (`cmd`) as the primary shell
 
-### 2. Create Virtual Environment
+### 2. Environment Setup
+
+Clone the repository and create a virtual environment:
 
 ```cmd
 python -m venv .venv
-
 .venv\Scripts\activate
-
 pip install -r requirements.txt
 ```
 
-### 3. Start PostgreSQL
+### 3. Database Initialization
+
+Start the PostgreSQL container:
 
 ```cmd
 docker compose up -d
 ```
 
-### 4. Configure Environment
+### 4. Configuration
+
+Copy the example environment file:
 
 ```cmd
 copy .env.example .env
@@ -250,133 +132,150 @@ copy .env.example .env
 Update `.env`:
 
 ```env
-GOOGLE_API_KEY=your_api_key
-
+GOOGLE_API_KEY=your_gemini_api_key_here
 GEMINI_CHAT_MODEL=gemini-3.5-flash-lite
-
 TRUSTSQL_API_KEY=trustsql-secret-key
+
+# Optional: Enable LangSmith Tracing
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your_langsmith_key
 ```
 
 ---
 
-## 🏃 Running TrustSQL
+## 🏃‍♂️ Running the Application
 
-### Start API Server
+You need two terminal windows to run the full stack.
+
+### Terminal 1: Start the FastAPI Server
 
 ```cmd
 uvicorn src.api.main:app --reload --port 8000
 ```
 
-### Test API
+### Terminal 2: Start the Streamlit UI
 
 ```cmd
-python -m src.api.test_client
+streamlit run app/streamlit_app.py
 ```
 
 ---
 
-## 📊 Evaluation Results
+## 🔌 Bring Your Own Database (Extensibility)
 
-TrustSQL includes an evaluation framework comparing a traditional LangChain baseline against the full Agentic Pipeline using a curated Olist Golden Dataset.
+TrustSQL is database-agnostic and can be adapted to virtually any SQL platform.
 
-### Execution Accuracy
+### Step 1: Write an Adapter
 
-| System | Accuracy |
-|----------|----------|
-| LangChain Baseline | 80% |
-| TrustSQL Agentic Pipeline | 92% |
-
-### Improvements
-
-- Accurate Cross-Domain Joins
-- Better Business Metric Understanding
-- Reduced Hallucinations
-- Self-Healing SQL Correction
-- Stronger SQL Validation
-- DQ-Enriched Business Responses
-
-### Run Agentic Evaluation
-
-```cmd
-python -m src.eval.eval_agentic
-```
-
-### Run Baseline Evaluation
-
-```cmd
-python -m src.eval.runner
-```
-
----
-
-## 📌 Sample Response
-
-### User Question
+Create a new file under:
 
 ```text
-What was the gross revenue generated by customers from São Paulo in Q1?
+src/adapters/db/
 ```
 
-### Generated SQL
+Implement the `DBConnector` interface including:
 
-```sql
-SELECT ...
-```
+- `run_query`
+- `list_columns`
+- `list_tables`
 
-### Query Result
-
-```json
-{
-  "gross_revenue": 1284937.22
-}
-```
-
-### Data Quality Advisory
+See:
 
 ```text
-Warning:
-Customer table failed Completeness checks during the latest DQ scan.
-
-Revenue figures may contain missing customer records.
+src/adapters/db/sqlite.py
 ```
 
+for a reference implementation.
+
+### Step 2: Update Settings
+
+Modify your `.env` file:
+
+```env
+DB_BACKEND=your_custom_adapter
+```
+
+### Step 3: Run the Ingestion Pipeline
+
+Execute:
+
+- DQ Profiler (`src.dq.profiler`)
+- Metadata Generator (`src.metadata.generator`)
+- Vector Indexer (`src.metadata.indexer`)
+
+This populates:
+
+- Knowledge Graph
+- Metadata Catalog
+- Vector Store
+
+### Step 4: Query
+
+Launch the Streamlit UI and begin asking business questions.
+
+TrustSQL agents automatically leverage:
+
+- Business ontology
+- Schema metadata
+- Knowledge Graph relationships
+- Vector search context
+
+for accurate SQL generation.
+
 ---
 
-## 🗺️ Project Roadmap
+## 📊 Evaluation & Future Testing
 
-### Phase 1
-Foundation & Benchmark Loading
+### Olist Golden Set Results
 
-### Phase 2
-DQCA Engine
+On a benchmark of **50 complex analytical queries**, the Agentic Pipeline achieved:
 
-### Phase 3
-Metadata Intelligence Platform
+| Approach | Execution Accuracy |
+|-----------|------------------|
+| Standard LangChain Baseline | ~80.0% |
+| TrustSQL Agentic Pipeline | ~92.0% |
 
-### Phase 4
-Agentic Text2SQL Engine
+### Future Validation: BIRD Benchmark
 
-### Phase 5
-FastAPI Productization
+To further demonstrate robustness, TrustSQL will be evaluated on the **BIRD Benchmark (Big Bench for Large-Scale Database Grounded Text-to-SQLs)**.
 
-### Phase 6
-Streamlit Experience Layer
+#### Current Status
 
-### Phase 7
-Enterprise Readiness & Extensibility
+- BIRD Mini-Dev dataset loaded.
+- 11 databases available under `bird_*` PostgreSQL schemas.
+- 500 benchmark questions ready for evaluation.
+
+#### Next Steps
+
+1. Run the DQ Profiler across all BIRD databases.
+2. Generate metadata and knowledge graphs.
+3. Build vector indexes.
+4. Execute:
+
+```text
+src.eval.bird_runner
+```
+
+5. Measure execution accuracy across:
+   - Cross-domain databases
+   - Noisy enterprise-style datasets
+   - Complex multi-hop analytical questions
+
+> Note: The BIRD dataset is used under the CC BY-SA 4.0 License.
 
 ---
 
-## 🎯 Why TrustSQL?
+## 🎯 Key Differentiators
 
-Most Text2SQL solutions focus solely on generating SQL.
+- ✅ Data Quality-aware query responses
+- ✅ Multi-agent LangGraph architecture
+- ✅ Knowledge Graph-based join path resolution
+- ✅ Semantic schema linking with vector search
+- ✅ Self-healing SQL generation loop
+- ✅ Business ontology injection
+- ✅ Cross-domain query routing
+- ✅ Semantic caching for lower latency and cost
+- ✅ Database-agnostic architecture
+- ✅ Enterprise-ready deployment model
 
-TrustSQL goes further by combining:
-
-- Data Quality Intelligence
-- Knowledge Graph Reasoning
-- Semantic Search
-- Business Ontology Awareness
-- Agentic AI Workflows
-
-The result is a platform that not only answers business questions but also helps users understand whether the underlying data can be trusted.
+TrustSQL bridges the gap between conversational analytics and trustworthy enterprise data access by combining Data Quality governance, metadata intelligence, knowledge graphs, vector retrieval, and agentic SQL generation into a single platform.

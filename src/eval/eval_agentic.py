@@ -49,78 +49,92 @@ def run_evaluation(limit: int = None, category: str = None):
     total_time = 0
     total_retries = 0
 
-    print(f"Starting Agentic Evaluation on {total} questions...\n")
+    # Setup file logging
+    report_dir = Path("reports")
+    report_dir.mkdir(exist_ok=True)
+    report_file = report_dir / "agentic_eval_results.txt"
 
-    for i, q in enumerate(questions, 1):
-        q_text = q["question"]
-        gold_sql = q.get("gold_sql")
-        cat = q.get("category", "unknown")
+    with open(report_file, "w", encoding="utf-8") as f:
 
-        print(f"[{i}/{total}] [{cat}] {q_text}")
+        def log_both(msg: str):
+            print(msg)
+            f.write(msg + "\n")
 
-        start_t = time.time()
-        # Pass eval_mode=True to disable LIMIT 100
-        state = run_agentic_text2sql(
-            q_text, source_id="olist", chat_history=[], eval_mode=True
-        )
-        elapsed = time.time() - start_t
-        total_time += elapsed
+        log_both(f"Starting Agentic Evaluation on {total} questions...\n")
 
-        pred_sql = state.get("generated_sql")
-        pred_rows = state.get("execution_result", [])
-        retries = state.get("retry_count", 0)
-        total_retries += retries
+        for i, q in enumerate(questions, 1):
+            q_text = q["question"]
+            gold_sql = q.get("gold_sql")
+            cat = q.get("category", "unknown")
 
-        if state.get("is_valid_sql"):
-            valid_sql += 1
+            log_both(f"[{i}/{total}] [{cat}] {q_text}")
 
-        is_correct = False
-        gold_rows = []
+            start_t = time.time()
+            state = run_agentic_text2sql(
+                q_text, source_id="olist", chat_history=[], eval_mode=True
+            )
+            elapsed = time.time() - start_t
+            total_time += elapsed
 
-        if gold_sql is None:
-            if (
-                not state.get("is_valid_sql")
-                or state.get("error_message")
-                or state.get("intent") == "out_of_scope"
-            ):
-                is_correct = True
-        else:
-            gold_rows = execute_gold(engine, gold_sql)
-            if state.get("is_valid_sql") and not state.get("error_message"):
-                order_sensitive = "ORDER BY" in gold_sql.upper()
-                is_correct = compare_results(
-                    gold_rows, pred_rows, order_sensitive=order_sensitive
-                )
+            pred_sql = state.get("generated_sql")
+            pred_rows = state.get("execution_result", [])
+            retries = state.get("retry_count", 0)
+            total_retries += retries
 
-        if is_correct:
-            print(f"  ✅ PASS in {elapsed:.1f}s (Retries: {retries})")
-            print(f"     Gold SQL: {gold_sql}")
-            print(f"     Pred SQL: {pred_sql}")
-            correct += 1
-        else:
-            print(f"  ❌ FAIL in {elapsed:.1f}s (Retries: {retries})")
-            print(f"     Gold SQL: {gold_sql}")
-            print(f"     Pred SQL: {pred_sql}")
-            if state.get("error_message"):
-                print(f"     Error: {state.get('error_message')}")
+            if state.get("is_valid_sql"):
+                valid_sql += 1
+
+            is_correct = False
+            gold_rows = []
+
+            if gold_sql is None:
+                if (
+                    not state.get("is_valid_sql")
+                    or state.get("error_message")
+                    or state.get("intent") == "out_of_scope"
+                ):
+                    is_correct = True
             else:
-                # Print the exact rows so we can debug the mismatch
-                print(f"     Gold Rows (first 3): {gold_rows[:3]}")
-                print(f"     Pred Rows (first 3): {pred_rows[:3]}")
+                gold_rows = execute_gold(engine, gold_sql)
+                if state.get("is_valid_sql") and not state.get("error_message"):
+                    order_sensitive = "ORDER BY" in gold_sql.upper()
+                    is_correct = compare_results(
+                        gold_rows, pred_rows, order_sensitive=order_sensitive
+                    )
 
-    acc = (correct / total) * 100 if total else 0
-    val = (valid_sql / total) * 100 if total else 0
-    avg_t = total_time / total if total else 0
+            if is_correct:
+                log_both(f"  ✅ PASS in {elapsed:.1f}s (Retries: {retries})")
+                log_both(f"     Gold SQL: {gold_sql}")
+                log_both(f"     Pred SQL: {pred_sql}")
+                correct += 1
+            else:
+                log_both(f"  ❌ FAIL in {elapsed:.1f}s (Retries: {retries})")
+                log_both(f"     Gold SQL: {gold_sql}")
+                log_both(f"     Pred SQL: {pred_sql}")
+                if state.get("error_message"):
+                    log_both(f"     Error: {state.get('error_message')}")
+                else:
+                    log_both(f"     Gold Rows (first 3): {gold_rows[:3]}")
+                    log_both(f"     Pred Rows (first 3): {pred_rows[:3]}")
+            log_both("-" * 80)
 
-    print("\n" + "=" * 45)
-    print(" AGENTIC PIPELINE EVALUATION SUMMARY")
-    print("=" * 45)
-    print(f" Total Questions : {total}")
-    print(f" Valid SQL %     : {val:.1f}%")
-    print(f" Execution Acc % : {acc:.1f}%")
-    print(f" Average Latency : {avg_t:.1f}s")
-    print(f" Total Retries   : {total_retries}")
-    print("=" * 45)
+        acc = (correct / total) * 100 if total else 0
+        val = (valid_sql / total) * 100 if total else 0
+        avg_t = total_time / total if total else 0
+
+        summary = (
+            f"\n{'=' * 45}\n"
+            f" AGENTIC PIPELINE EVALUATION SUMMARY\n"
+            f"{'=' * 45}\n"
+            f" Total Questions : {total}\n"
+            f" Valid SQL %     : {val:.1f}%\n"
+            f" Execution Acc % : {acc:.1f}%\n"
+            f" Average Latency : {avg_t:.1f}s\n"
+            f" Total Retries   : {total_retries}\n"
+            f"{'=' * 45}\n"
+        )
+        log_both(summary)
+        print(f"Detailed report saved to: {report_file}")
 
 
 if __name__ == "__main__":

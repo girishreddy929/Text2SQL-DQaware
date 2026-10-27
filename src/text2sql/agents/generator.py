@@ -26,7 +26,6 @@ def get_target_schemas(source_id: str) -> list[str]:
 
 
 def build_targeted_schema_context(source_id: str, selected_tables: list[str]) -> str:
-    """Builds schema context ONLY for the selected tables."""
     schemas = get_target_schemas(source_id)
     connector = get_connector(read_only=True)
 
@@ -35,11 +34,9 @@ def build_targeted_schema_context(source_id: str, selected_tables: list[str]) ->
     finally:
         connector.close()
 
-    # Group by schema.table
     tables_dict = {}
     for col in all_cols:
         table_key = f"{col.schema}.{col.table}"
-        # If selected_tables is empty, fallback to all tables (safety net)
         if not selected_tables or table_key in selected_tables:
             if table_key not in tables_dict:
                 tables_dict[table_key] = []
@@ -73,24 +70,18 @@ Rules:
 3. Always double-quote column names if they contain spaces or special characters.
 4. Use the provided join paths if joining tables.
 5. Use the provided ontology formulas for business metrics.
-6. FORMATTING: When grouping by month, always format the output as 'YYYY-MM' using `to_char(column, 'YYYY-MM')`.
-7. FORMATTING: If asking for a list of distinct values, always include an ORDER BY clause to sort them.
-8. SAFETY: If a query asks to 'show' or 'list' raw records without any aggregation, append `LIMIT 10` to prevent massive result sets.
 """
 
-    # Format ontology
     ontology_ctx = ""
     if state.get("resolved_terms"):
         ontology_ctx = "Business Metrics & Ontology:\n"
         for term in state["resolved_terms"]:
             ontology_ctx += f"- {term['term_name']}: {term['sql_expression']}\n"
 
-    # Format evidence
     evidence_ctx = ""
     if state.get("evidence"):
         evidence_ctx = f"External Evidence/Hints:\n{state['evidence']}\n"
 
-    # Format join path
     join_path = state.get("join_path", "")
     if join_path:
         join_path = f"Join Paths:\n{join_path}\n"
@@ -132,16 +123,3 @@ def sql_generator_node(state: dict) -> dict:
         return {"error_message": f"Generation failed: {str(e)}"}
 
     return {"error_message": "Failed to generate SQL."}
-
-
-if __name__ == "__main__":
-    # Quick test simulating the output of the Domain Selector
-    test_state = {
-        "question": "What is the total revenue by product category?",
-        "source_id": "olist",
-        "selected_tables": ["catalog.products", "sales.order_items"],
-        "join_path": "Known valid join conditions:\n- catalog.products.product_id = sales.order_items.product_id",
-    }
-    print("--- Testing Targeted SQL Generator ---")
-    res = sql_generator_node(test_state)
-    print(f"\nGenerated SQL:\n{res.get('generated_sql')}")
